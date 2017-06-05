@@ -1,0 +1,89 @@
+---
+title: "Reproducible Research - Course Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Activity Monitoring
+
+This project makes use of data from a personal activity monitoring device. The data was downloaded from  
+[Activity Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip).
+
+```{r, echo=TRUE}
+library(dplyr)
+fileURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(fileURL, "activity.zip")
+unzip("activity.zip")
+activities <- read.csv("activity.csv")
+
+## Create a new column called newDate and convert the existing date column to 
+## a valid date type
+activities["newDate"] <- as.Date(activities$date,'%Y-%m-%d') 
+
+## remove NA's
+completeactivities <- activities[complete.cases(activities),]
+
+## group by Date
+activityGroups <- completeactivities %>% group_by(newDate)
+stepCountByDate <- summarize(activityGroups, steps=sum(steps))
+hist(stepCountByDate$steps,xlab = "Number of Steps", main = "Histogram of total number of steps taken each day")
+```
+
+## Mean and Median of Steps taken each day
+
+```{r mean and median, echo=TRUE}
+print(paste('Mean: ', mean(stepCountByDate$steps,na.rm = TRUE)))
+print(paste('Median: ',median(stepCountByDate$steps, na.rm = TRUE)))
+```
+
+## Time Series plot of the average number of steps taken
+
+```{r time series plot,echo = TRUE}
+plot(stepCountByDate$newDate,stepCountByDate$steps, ylab = "Average Number of Steps", xlab = "Date", 
+     type = 'l',main = 'Time Series of Average Number of Steps')
+```
+
+## The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r max steps, echo = TRUE}
+completeactivities[completeactivities$steps == max(completeactivities$steps),]
+```
+
+## Code to describe and show a strategy for imputing missing data
+
+Looking at the summary to analyze missing data
+
+```{r summary of missing data, echo = TRUE}
+summary(activities)
+```
+
+
+We have 2304 NAs in steps. Lets assume that 0 steps were taken at that interval.
+And look at summary again
+```{r replace missing values, echo = TRUE}
+activities[is.na(activities)] <- 0
+summary(activities)
+```
+## Histogram of the total number of steps taken each day after missing values are imputed
+```{r histogram after replacing missing values, echo = TRUE}
+hist(stepCountByDate$steps,xlab = "Number of Steps", main = "Histogram of total number of steps taken each day")
+```
+
+## Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{r, echo=TRUE, fig.height=20,fig.width=40}
+wdays<-c("Monday","Tuesday","Wednesday","Thursday","Friday")
+wends<-c("Saturday","Sunday")
+
+wdayActivities <- completeactivities[weekdays(completeactivities$newDate) %in% wdays,]
+wendActivities <- completeactivities[weekdays(completeactivities$newDate) %in% wends,]
+
+par(mfrow=c(2,2))
+plot(wendActivities$interval,wendActivities$steps, xlab = 'Intervals', ylab = 'Steps', main = 'Activites during weekend', type = 'l')
+plot(wdayActivities$interval,wdayActivities$steps, xlab = 'Intervals', ylab = 'Steps', main = 'Activites during weekday', type = 'l')
+
+```
+
+
